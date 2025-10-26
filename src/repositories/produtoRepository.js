@@ -1,58 +1,83 @@
-let produtos = [];
+const pool = require('../config/database');
 
-function listar({ nome, precoMin, precoMax, page = 1, limit = 10 }) {
-  let resultado = produtos;
+async function listar({ page = 1, pageSize = 10, nome, precoMin, precoMax }) {
+  const offset = (page - 1) * pageSize;
+  let query = 'SELECT * FROM produtos WHERE 1=1';
+  const params = [];
 
   if (nome) {
-    resultado = resultado.filter(p =>
-      p.nome.toLowerCase().includes(nome.toLowerCase())
-    );
+    params.push(`%${nome}%`);
+    query += ` AND nome ILIKE $${params.length}`;
   }
-
   if (precoMin) {
-    resultado = resultado.filter(p => p.preco >= parseFloat(precoMin));
+    params.push(precoMin);
+    query += ` AND preco >= $${params.length}`;
   }
-
   if (precoMax) {
-    resultado = resultado.filter(p => p.preco <= parseFloat(precoMax));
+    params.push(precoMax);
+    query += ` AND preco <= $${params.length}`;
   }
 
-  const total = resultado.length;
-  const start = (page - 1) * limit;
-  const end = start + limit;
-  const paginado = resultado.slice(start, end);
+  query += ` ORDER BY criado_em DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+  params.push(pageSize, offset);
 
-  return { total, page, limit, data: paginado };
+  const { rows } = await pool.query(query, params);
+  const total = (await pool.query('SELECT COUNT(*) FROM produtos')).rows[0].count;
+
+  return { total: Number(total), page, pageSize, data: rows };
 }
 
-function buscarPorId(id) {
-  return produtos.find(p => p.id === id);
+async function buscarPorId(id) {
+  const { rows } = await pool.query('SELECT * FROM produtos WHERE id = $1', [id]);
+  return rows[0];
 }
 
-function criar(produto) {
-  produtos.push(produto);
-  return produto;
+async function criar(produto) {
+  const query = `
+    INSERT INTO produtos (id, nome, descricao, preco, estoque, categoria_id)
+    VALUES ($1, $2, $3, $4, $5, $6)
+    RETURNING *;
+  `;
+  const values = [
+    produto.id,
+    produto.nome,
+    produto.descricao,
+    produto.preco,
+    produto.estoque,
+    produto.categoriaId,
+  ];
+  const { rows } = await pool.query(query, values);
+  return rows[0];
 }
 
-function atualizar(id, dados) {
-  const index = produtos.findIndex(p => p.id === id);
-  if (index === -1) return null;
-  
-  produtos[index] = {
-    ...produtos[index],
-    ...dados,
-    preco: dados.preco !== undefined ? Number(dados.preco) : produtos[index].preco,
-    estoque: dados.estoque !== undefined ? Number(dados.estoque) : produtos[index].estoque
-  };
+async function atualizar(id, dados) {
+  const campos = [];
+  const valores = [];
+  let i = 1;
 
-  return produtos[index];
+  for (const [key, value] of Object.entries(dados)) {
+    if (['nome', 'descricao', 'preco', 'estoque', 'categoriaId'].includes(key)) {
+      campos.push(`${key === 'categoriaId' ? 'categoria_id' : key} = $${i++}`);
+      valores.push(value);
+    }
+  }
+
+  if (!campos.length) return null;
+
+  valores.push(id);
+  const query = `
+    UPDATE produtos
+    SET ${campos.join(', ')}, atualizado_em = NOW()
+    WHERE id = $${i}
+    RETURNING *;
+  `;
+  const { rows } = await pool.query(query, valores);
+  return rows[0];
 }
 
-function excluir(id) {
-  const index = produtos.findIndex(p => p.id === id);
-  if (index === -1) return false;
-  produtos.splice(index, 1);
-  return true;
+async function excluir(id) {
+  const { rowCount } = await pool.query('DELETE FROM produtos WHERE id = $1', [id]);
+  return rowCount > 0;
 }
 
 module.exports = { listar, buscarPorId, criar, atualizar, excluir };
