@@ -1,0 +1,346 @@
+openapi: 3.0.3
+info:
+  title: API de Catálogo de Produtos
+  version: 1.0.0
+  description: >
+    Serviço oficial de catálogo de produtos do e-commerce.
+    Fonte de verdade para produtos consumidos por site, app, lojas e APIs parceiras.
+
+servers:
+  - url: /v1
+    description: Versão 1 da API (versionamento no caminho base)
+
+tags:
+  - name: Produtos
+    description: Operações de produtos
+  - name: Infra
+    description: Operações de infraestrutura (healthcheck)
+
+paths:
+  /health:
+    get:
+      tags: [Infra]
+      summary: Healthcheck do serviço
+      operationId: getHealth
+      responses:
+        '200':
+          description: Serviço operante
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  uptime:
+                    type: number
+                    format: float
+                    description: Segundos desde que o processo iniciou
+                    example: 123.45
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: 2025-10-19T21:07:00.321Z
+
+  /produtos:
+    get:
+      tags: [Produtos]
+      summary: Listar produtos (paginado)
+      description: >
+        Retorna lista **paginada** de produtos.  
+        Suporta filtros opcionais por nome, categoriaId, precoMin e precoMax.
+      operationId: listProdutos
+      parameters:
+        - in: query
+          name: page
+          description: Página (>= 1)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: pageSize
+          description: Itens por página (1–100)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - in: query
+          name: nome
+          description: Filtro por nome (contém, case-insensitive)
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: categoriaId
+          description: Filtro por categoria
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: precoMin
+          description: Preço mínimo (>= 0)
+          required: false
+          schema:
+            type: number
+            minimum: 0
+        - in: query
+          name: precoMax
+          description: Preço máximo (>= 0)
+          required: false
+          schema:
+            type: number
+            minimum: 0
+      responses:
+        '200':
+          description: Lista paginada de produtos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedProdutos'
+              examples:
+                ok:
+                  summary: Página com itens
+                  value:
+                    total: 2
+                    page: 1
+                    pageSize: 10
+                    data:
+                      - id: "d2f3a41a-4475-4a78-8bb2-6bcd05ff6f5c"
+                        nome: "Notebook Dell"
+                        descricao: "Notebook 15”"
+                        preco: 4500
+                        estoque: 10
+                        categoriaId: "notebooks"
+                      - id: "6c52d27f-72b4-4ff7-9f6c-4ec515eb8f3e"
+                        nome: "Monitor LG"
+                        descricao: "Monitor 24”"
+                        preco: 1200
+                        estoque: 5
+                        categoriaId: "monitores"
+        '404':
+          description: Nenhum produto encontrado para o critério
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                vazio:
+                  value:
+                    erro: "Nenhum produto encontrado"
+        '500':
+          description: Erro interno ao listar produtos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags: [Produtos]
+      summary: Criar produto
+      description: Cria um novo produto. **Requer autenticação JWT (Bearer)**.
+      operationId: createProduto
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProdutoCreate'
+            examples:
+              exemplo:
+                value:
+                  nome: "Notebook Dell"
+                  descricao: "Notebook 15”"
+                  preco: 4500
+                  estoque: 10
+                  categoriaId: "notebooks"
+      responses:
+        '201':
+          description: Produto criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Produto'
+        '400':
+          description: Payload inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalido:
+                  value:
+                    erro: "Campos obrigatórios: nome, preco, categoriaId"
+        '401':
+          description: Não autenticado (token ausente ou inválido)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /produtos/{produtoId}:
+    get:
+      tags: [Produtos]
+      summary: Buscar produto por ID
+      operationId: getProdutoById
+      parameters:
+        - in: path
+          name: produtoId
+          required: true
+          description: UUID do produto
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Produto encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Produto'
+        '404':
+          description: Produto não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Produtos]
+      summary: Excluir produto
+      description: Exclui um produto existente. **Requer autenticação JWT (Bearer)**.
+      operationId: deleteProduto
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: produtoId
+          required: true
+          description: UUID do produto
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Produto excluído (sem corpo)
+        '401':
+          description: Não autenticado (token ausente ou inválido)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Produto não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Autenticação via JWT. Envie o cabeçalho `Authorization: Bearer <token>`.
+
+  schemas:
+    Produto:
+      type: object
+      required: [id, nome, preco, estoque, categoriaId]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: UUID gerado pelo sistema
+          example: "d2f3a41a-4475-4a78-8bb2-6bcd05ff6f5c"
+        nome:
+          type: string
+          minLength: 1
+          maxLength: 120
+          example: "Notebook Dell"
+        descricao:
+          type: string
+          maxLength: 2000
+          nullable: true
+          example: "Notebook 15” com 16GB RAM"
+        preco:
+          type: number
+          minimum: 0
+          example: 4500
+        estoque:
+          type: integer
+          minimum: 0
+          default: 0
+          example: 10
+        categoriaId:
+          type: string
+          minLength: 1
+          maxLength: 50
+          example: "notebooks"
+
+    ProdutoCreate:
+      type: object
+      required: [nome, preco, categoriaId]
+      properties:
+        nome:
+          type: string
+          minLength: 1
+          maxLength: 120
+        descricao:
+          type: string
+          maxLength: 2000
+          nullable: true
+        preco:
+          type: number
+          minimum: 0
+        estoque:
+          type: integer
+          minimum: 0
+          default: 0
+        categoriaId:
+          type: string
+          minLength: 1
+          maxLength: 50
+      example:
+        nome: "Notebook Dell"
+        descricao: "Notebook 15”"
+        preco: 4500
+        estoque: 10
+        categoriaId: "notebooks"
+
+    PagedProdutos:
+      type: object
+      description: Resposta de listagem paginada
+      required: [total, page, pageSize, data]
+      properties:
+        total:
+          type: integer
+          minimum: 0
+          example: 2
+        page:
+          type: integer
+          minimum: 1
+          example: 1
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 10
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Produto'
+
+    Error:
+      type: object
+      properties:
+        erro:
+          type: string
+      example:
+        erro: "Mensagem de erro"
