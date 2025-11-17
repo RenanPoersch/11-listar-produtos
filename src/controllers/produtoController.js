@@ -1,6 +1,5 @@
 const service = require('../services/produtoService');
 
-// 🧾 LISTAR PRODUTOS (com filtros e paginação)
 async function listar(req, res) {
   try {
     const filtros = {
@@ -19,7 +18,6 @@ async function listar(req, res) {
   }
 }
 
-// 🔎 BUSCAR PRODUTO POR ID
 async function buscarPorId(req, res) {
   try {
     const produto = await service.buscarPorId(req.params.id);
@@ -33,7 +31,6 @@ async function buscarPorId(req, res) {
   }
 }
 
-// ➕ CRIAR NOVO PRODUTO
 async function criar(req, res) {
   try {
     const produto = await service.criar(req.body);
@@ -44,7 +41,6 @@ async function criar(req, res) {
   }
 }
 
-// ✏️ ATUALIZAR PRODUTO EXISTENTE
 async function atualizar(req, res) {
   try {
     const produto = await service.atualizar(req.params.id, req.body);
@@ -58,7 +54,6 @@ async function atualizar(req, res) {
   }
 }
 
-// 🗑️ EXCLUIR PRODUTO
 async function excluir(req, res) {
   try {
     const ok = await service.excluir(req.params.id);
