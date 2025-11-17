@@ -1,7 +1,7 @@
-// URL base da API - altere aqui para trocar entre localhost e produção
+// URL base da API - CORRIJA AQUI COM A URL CORRETA DO SEU SERVIÇO NO RENDER
 const API_BASE_URL = window.location.hostname === 'localhost' 
     ? 'http://localhost:3000'
-    : 'https://dpg-d4d8k2mr433s73dv79ug-a.oregon-postgres.render.com';
+    : 'https://one1-listar-produtos.onrender.com/'; // Substitua por sua URL do Render
 
 const API_URL = `${API_BASE_URL}/v1/produtos`;
 
@@ -37,7 +37,14 @@ async function carregarProdutos() {
         errorElement.style.display = 'none';
         produtosGrid.style.display = 'none';
 
-        const response = await fetch(API_URL);
+        console.log('Tentando buscar de:', API_URL);
+
+        const response = await fetch(API_URL, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -46,7 +53,6 @@ async function carregarProdutos() {
         const resultado = await response.json();
         console.log('Resposta da API:', resultado);
 
-        // A API retorna { success, data, pagination }
         const produtos = resultado.data || [];
 
         if (!Array.isArray(produtos) || produtos.length === 0) {
@@ -66,5 +72,4 @@ async function carregarProdutos() {
     }
 }
 
-// Carrega os produtos quando a página é aberta
 document.addEventListener('DOMContentLoaded', carregarProdutos);
