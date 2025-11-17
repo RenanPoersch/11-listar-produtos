@@ -10,10 +10,12 @@ const loadingElement = document.getElementById('loading');
 const errorElement = document.getElementById('error');
 
 function formatarPreco(preco) {
+    // Converte string para número se necessário
+    const precoNumero = typeof preco === 'string' ? parseFloat(preco) : preco;
     return new Intl.NumberFormat('pt-BR', {
         style: 'currency',
         currency: 'BRL'
-    }).format(preco);
+    }).format(precoNumero);
 }
 
 function criarCardProduto(produto) {
@@ -53,7 +55,8 @@ async function carregarProdutos() {
         const resultado = await response.json();
         console.log('Resposta da API:', resultado);
 
-        const produtos = resultado.data || [];
+        // A API retorna { produtos, page, pageSize, total, totalPages }
+        const produtos = resultado.produtos || resultado.data || [];
 
         if (!Array.isArray(produtos) || produtos.length === 0) {
             produtosGrid.innerHTML = '<p class="message">Nenhum produto encontrado.</p>';
