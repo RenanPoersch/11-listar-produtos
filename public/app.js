@@ -1,7 +1,7 @@
-// URL base da API - CORRIJA AQUI COM A URL CORRETA DO SEU SERVIÇO NO RENDER
+// URL base da API
 const API_BASE_URL = window.location.hostname === 'localhost' 
     ? 'http://localhost:3000'
-    : 'https://one1-listar-produtos.onrender.com/'; // Substitua por sua URL do Render
+    : 'https://one1-listar-produtos.onrender.com';
 
 const API_URL = `${API_BASE_URL}/v1/produtos`;
 
