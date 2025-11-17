@@ -100,7 +100,7 @@ exports.buscarPorId = async (id) => {
     const result = await pool.query(query, [id]);
     return result.rows[0];
   } catch (error) {
-    console.error('Erro no produtoRepository.buscarPorId:', error);
+    console.error('Erro  no produtoRepository.buscarPorId:', error);
     throw error;
   }
 };
